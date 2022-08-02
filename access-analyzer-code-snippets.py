@@ -11,15 +11,16 @@ analyzer_arn = ""
 # get or create access analyzer
 
 try:
-    # get all active analyzers for the given account
-    active_analyzers = [a for a in aa_client.list_analyzers(type="ACCOUNT").get("analyzers") if a["status"] == "ACTIVE"]
-    
-    if active_analyzers:
+    if active_analyzers := [
+        a
+        for a in aa_client.list_analyzers(type="ACCOUNT").get("analyzers")
+        if a["status"] == "ACTIVE"
+    ]:
         # take the first active analyzer if there are any active analyzer
         analyzer_arn = active_analyzers[0]["arn"]
     else:
         # try to create a new analyzer if there is no analyzer already created for the account
-        a_name = "AccessAnalyzer-" + str(uuid.uuid1())
+        a_name = f"AccessAnalyzer-{str(uuid.uuid1())}"
         analyzer_arn = aa_client.create_analyzer(
             analyzerName=a_name,
             type="ACCOUNT").get("arn")
@@ -65,7 +66,7 @@ for _ in range(MAX_LIST_ANALYZED_RESOURSES_ATTEMPTS):
         for r in page["analyzedResources"]:
             if r["resourceArn"] in resource_scan:
                 resource_scan[r["resourceArn"]] = True
-                
+
     pending = {r:s for r,s in resource_scan.items() if not s}
 
     if not pending: # exit if all requested resources are processed

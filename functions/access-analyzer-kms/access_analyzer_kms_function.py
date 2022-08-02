@@ -27,25 +27,27 @@ accountId = boto3.client('sts').get_caller_identity()["Account"]
 
 # get or create access analyzer
 def get_analyzer_arn():
-    aa_arn = ""
+        aa_arn = ""
 
-    try:
-        # get all active analyzers for the given account
-        active_analyzers = [a for a in aa_client.list_analyzers(type="ACCOUNT").get("analyzers") if a["status"] == "ACTIVE"]
-        
-        if active_analyzers:
-            # take the first active analyzer if there are any active analyzer
-            aa_arn = active_analyzers[0]["arn"]
-        else:
-            # try to create a new analyzer if there is no analyzer already created for the account
-            aa_arn = aa_client.create_analyzer(
-                analyzerName="AccessAnalyzer-" + str(uuid.uuid1()),
-                type="ACCOUNT").get("arn")
+        try:
+                if active_analyzers := [
+                    a for a in aa_client.list_analyzers(
+                            type="ACCOUNT").get("analyzers")
+                    if a["status"] == "ACTIVE"
+                ]:
+                        # take the first active analyzer if there are any active analyzer
+                        aa_arn = active_analyzers[0]["arn"]
+                else:
+                                    # try to create a new analyzer if there is no analyzer already created for the account
+                        aa_arn = aa_client.create_analyzer(
+                            analyzerName=f"AccessAnalyzer-{str(uuid.uuid1())}",
+                            type="ACCOUNT",
+                        ).get("arn")
 
-    except Exception as e:
-        print(f"Exception during get analyzer: {str(e)}")
+        except Exception as e:
+            print(f"Exception during get analyzer: {str(e)}")
 
-    return aa_arn
+        return aa_arn
 
 # get all KMS keys in the account in the region
 def get_customer_keys_arns():
@@ -94,7 +96,7 @@ def scan_kms_customer_keys(aa_arn, customer_keys_arns):
                 for r in page["analyzedResources"]:
                     if r["resourceArn"] in resource_scan:
                         resource_scan[r["resourceArn"]] = True
-                        
+
             pending = {r:s for r,s in resource_scan.items() if not s}
 
             if not pending: # exit if all requested resources are processed
@@ -105,7 +107,7 @@ def scan_kms_customer_keys(aa_arn, customer_keys_arns):
     else:
         print(f"Max number ({MAX_LIST_ANALYZED_RESOURSES_ATTEMPTS}) of attempts to call list_analyzed_resources reached")
         print(f"The following resources weren't analyzed: {json.dumps(pending, indent=2)}")
-        
+
     # get resource scan result only on analyzed resources
     for r_arn in {r for r,s in resource_scan.items() if s}:
         try:
